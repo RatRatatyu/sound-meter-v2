@@ -3,16 +3,32 @@ import 'dart:developer';
 import 'package:noise_meter_v2/core/permission_handler/permission_types.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+
 class PermissionService {
-  Future<PermissionStatus> getMicrophoneStatus() async {
-    return await Permission.microphone.status;
+  Future<MicrophonePermissionStatus> checkMicrophonePermission() async{
+    final status = await Permission.microphone.status;
+
+    if (status.isGranted) {
+      return MicrophonePermissionStatus.granted;
+    }
+    return MicrophonePermissionStatus.denied;
   }
 
-  Future<PermissionStatus> requestMicrophonePermission() async {
-    return await Permission.microphone.request();
+  Future<MicrophonePermissionStatus> requestMicrophonePermission() async {
+    final status = await Permission.microphone.request();
+
+    if (status.isGranted) {
+      return MicrophonePermissionStatus.granted;
+    }
+
+    if (status.isPermanentlyDenied) {
+      return MicrophonePermissionStatus.permanentlyDenied;
+    }
+
+    return MicrophonePermissionStatus.denied;
   }
 
-  Future<void> openSettings() async {
-    await openAppSettings();
+  Future openSettings() async{
+    openSettings();
   }
 }
