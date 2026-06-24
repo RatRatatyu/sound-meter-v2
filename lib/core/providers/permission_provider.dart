@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:noise_meter_v2/core/permission_handler/permission_service.dart';
-import '../../../core/permission_handler/permission_types.dart';
+
+import '../services/permission_handler/permission_service.dart';
+import '../services/permission_handler/permission_types.dart';
+
 
 
 class PermissionProvider extends ChangeNotifier with WidgetsBindingObserver {
