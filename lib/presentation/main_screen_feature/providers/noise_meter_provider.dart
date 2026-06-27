@@ -72,7 +72,6 @@ class NoiseMeterProvider extends ChangeNotifier{
         }
 
         _currentDecibels = newDecibels;
-        log("$_currentDecibels");
         notifyListeners();
       });
     }
