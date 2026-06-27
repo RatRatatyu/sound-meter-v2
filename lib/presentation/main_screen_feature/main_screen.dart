@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/additional_decimeter_indicators.dart';
+import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/current_decimeter_indicator.dart';
 
 
 
@@ -18,7 +20,7 @@ class MainScreen extends StatelessWidget {
           ),
           Expanded(
               flex: 1,
-              child: Placeholder()
+              child: CurrentDecimeterIndicator()
           ),
           AspectRatio(
             aspectRatio: 15/4,
@@ -26,7 +28,7 @@ class MainScreen extends StatelessWidget {
           ),
           Expanded(
               flex: 1,
-              child: Placeholder()
+              child: AdditionalDecimeterIndicators()
           ),
         ],
       );
@@ -53,7 +55,7 @@ class MainScreen extends StatelessWidget {
 
                 Expanded(
                   flex: 1,
-                  child: Placeholder(),
+                  child: CurrentDecimeterIndicator(),
                 ),
 
                 LayoutBuilder(
@@ -72,7 +74,7 @@ class MainScreen extends StatelessWidget {
 
                 Expanded(
                   flex: 1,
-                  child: Placeholder(),
+                  child: AdditionalDecimeterIndicators(),
                 ),
               ],
             ),
