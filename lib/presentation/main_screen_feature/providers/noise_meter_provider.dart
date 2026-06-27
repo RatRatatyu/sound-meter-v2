@@ -19,7 +19,8 @@ class NoiseMeterProvider extends ChangeNotifier{
     int _avgDecibels = 0;
     int get avgDecibels => _avgDecibels;
 
-
+    int _totalTicks = 0;
+    double _sumDecibels = 0.0;
 
     bool _isListening = false;
     bool get isListening => _isListening;
@@ -46,7 +47,6 @@ class NoiseMeterProvider extends ChangeNotifier{
 
     Future<void> startListen() async {
       _isListening = true;
-      _smoothedDecibels = 0.0;
       await _audioRecorder.startAudioStream();
       await _audioSubscription?.cancel();
 
@@ -61,10 +61,15 @@ class NoiseMeterProvider extends ChangeNotifier{
         _smoothedDecibels = (k * currentCalibrated) + ((1-k)* _smoothedDecibels);
         int newDecibels = _smoothedDecibels.round();
 
+        if(newDecibels > _maxDecibels) _maxDecibels = newDecibels;
+
+        _totalTicks++;
+        _sumDecibels += newDecibels;
+        _avgDecibels = (_sumDecibels / _totalTicks).round();
+
         if(newDecibels == _currentDecibels){
           return;
         }
-
 
         _currentDecibels = newDecibels;
         log("$_currentDecibels");
@@ -77,6 +82,10 @@ class NoiseMeterProvider extends ChangeNotifier{
       await _audioSubscription?.cancel();
       await _audioRecorder.onStopRecording();
       _currentDecibels = 0;
+      _avgDecibels = 0;
+      _maxDecibels = 0;
+      _sumDecibels = 0;
+      _totalTicks = 0;
       _smoothedDecibels = 0.0;
       notifyListeners();
     }
