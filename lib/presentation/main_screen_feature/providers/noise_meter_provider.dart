@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:noise_meter_v2/core/services/noise_meter_handler/audio_record_service.dart';
 import 'package:noise_meter_v2/core/providers/permission_provider.dart';
