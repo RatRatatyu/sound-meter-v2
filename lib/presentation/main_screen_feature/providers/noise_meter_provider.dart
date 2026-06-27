@@ -13,8 +13,19 @@ class NoiseMeterProvider extends ChangeNotifier{
     int _currentDecibels = 0;
     int get currentDecibels  => _currentDecibels;
 
+    int _maxDecibels = 0;
+    int get maxDecibels => _maxDecibels;
+
+    int _avgDecibels = 0;
+    int get avgDecibels => _avgDecibels;
+
+
+
     bool _isListening = false;
     bool get isListening => _isListening;
+
+    double _calibrationOffset = 90.0;
+    double _smoothedDecibels = 0.0;
 
 
     Future<void> toggleListening(PermissionProvider permissionProvider) async{
@@ -26,25 +37,37 @@ class NoiseMeterProvider extends ChangeNotifier{
       }
 
       if(_isListening){
-        stopListen();
+        await stopListen();
       }else{
-        startListen();
+        await startListen();
       }
     }
 
 
     Future<void> startListen() async {
       _isListening = true;
+      _smoothedDecibels = 0.0;
       await _audioRecorder.startAudioStream();
       await _audioSubscription?.cancel();
 
       _audioSubscription = _audioRecorder.amplitudeStream.listen((amplitude){
-        double noiseLevel = amplitude.current +100;
+        double rawDb = amplitude.current;
+        if (rawDb < -120) rawDb = -120;
 
-        if (noiseLevel < 0) noiseLevel = 0;
+        double currentCalibrated = rawDb + _calibrationOffset;
+        if (currentCalibrated < 0) currentCalibrated = 0;
 
-        _currentDecibels = noiseLevel.round();
-        log("$currentDecibels");
+        double k = 0.3;
+        _smoothedDecibels = (k * currentCalibrated) + ((1-k)* _smoothedDecibels);
+        int newDecibels = _smoothedDecibels.round();
+
+        if(newDecibels == _currentDecibels){
+          return;
+        }
+
+
+        _currentDecibels = newDecibels;
+        log("$_currentDecibels");
         notifyListeners();
       });
     }
@@ -54,6 +77,7 @@ class NoiseMeterProvider extends ChangeNotifier{
       await _audioSubscription?.cancel();
       await _audioRecorder.onStopRecording();
       _currentDecibels = 0;
+      _smoothedDecibels = 0.0;
       notifyListeners();
     }
 
