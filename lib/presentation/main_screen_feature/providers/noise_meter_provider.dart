@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:noise_meter_v2/core/services/noise_meter_handler/audio_record_service.dart';
 import 'package:noise_meter_v2/core/providers/permission_provider.dart';
@@ -18,11 +19,18 @@ class NoiseMeterProvider extends ChangeNotifier{
     int _avgDecibels = 0;
     int get avgDecibels => _avgDecibels;
 
+    List<int> _slidingWindow = [];
+    List<int> get slidingWindow => _slidingWindow;
+
+    final int _slidingWindowSize = 20;
+
     int _totalTicks = 0;
     double _sumDecibels = 0.0;
 
     bool _isListening = false;
     bool get isListening => _isListening;
+
+    bool _isFading = false;
 
     double _calibrationOffset = 90.0;
     double _smoothedDecibels = 0.0;
@@ -36,9 +44,11 @@ class NoiseMeterProvider extends ChangeNotifier{
         }
       }
 
+
       if(_isListening){
         await stopListen();
       }else{
+        await Future.delayed(const Duration(milliseconds: 500));
         await startListen();
       }
     }
@@ -66,7 +76,14 @@ class NoiseMeterProvider extends ChangeNotifier{
         _sumDecibels += newDecibels;
         _avgDecibels = (_sumDecibels / _totalTicks).round();
 
+        if(_slidingWindow.length > _slidingWindowSize){
+          _slidingWindow.removeAt(0);
+        }
+        _slidingWindow.add(newDecibels);
+        _slidingWindow = List.from(_slidingWindow);
+
         if(newDecibels == _currentDecibels){
+          notifyListeners();
           return;
         }
 
@@ -76,6 +93,9 @@ class NoiseMeterProvider extends ChangeNotifier{
     }
 
     Future<void> stopListen() async {
+      if(_isFading) return;
+      _isFading = true;
+
       _isListening = false;
       await _audioSubscription?.cancel();
       await _audioRecorder.onStopRecording();
@@ -86,15 +106,34 @@ class NoiseMeterProvider extends ChangeNotifier{
       _totalTicks = 0;
       _smoothedDecibels = 0.0;
       notifyListeners();
-    }
-
-    @override
-    void dispose() {
-      _audioSubscription?.cancel();
-      _audioRecorder.dispose();
-      super.dispose();
-    }
 
 
 
+      Timer.periodic(const Duration(milliseconds: 40), (timer){
+
+        _slidingWindow.removeAt(0);
+        _slidingWindow.add(0);
+
+         bool allZeros = _slidingWindow.every((db) => db ==0);
+
+         _slidingWindow = List.from(_slidingWindow);
+         notifyListeners();
+
+         if(allZeros){
+            timer.cancel();
+            _slidingWindow = [];
+            _isFading = false;
+            log("stop");
+            notifyListeners();
+         }
+
+        });
+      }
+
+      @override
+      void dispose() {
+        _audioSubscription?.cancel();
+        _audioRecorder.dispose();
+        super.dispose();
+      }
 }
