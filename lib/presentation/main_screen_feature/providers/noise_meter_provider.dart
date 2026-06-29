@@ -1,139 +1,112 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:developer';
+import 'dart:ui';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:noise_meter_v2/core/services/noise_meter_handler/audio_record_service.dart';
 import 'package:noise_meter_v2/core/providers/permission_provider.dart';
+import 'package:noise_meter_v2/core/services/noise_meter_handler/audio_record_service.dart';
+import 'package:noise_meter_v2/presentation/main_screen_feature/service/noise_processor_service.dart';
 
 import '../../../core/services/permission_handler/permission_types.dart';
 
-class NoiseMeterProvider extends ChangeNotifier{
-    final _audioRecorder = AudioRecordService();
-    StreamSubscription? _audioSubscription;
+class NoiseMeterProvider extends ChangeNotifier with WidgetsBindingObserver {
+  final _audioRecorder = AudioRecordService();
+  StreamSubscription? _audioSubscription;
 
-    int _currentDecibels = 0;
-    int get currentDecibels  => _currentDecibels;
+  final PermissionProvider permissionProvider;
+  final NoiseProcessorService noiseProcessorService;
 
-    int _maxDecibels = 0;
-    int get maxDecibels => _maxDecibels;
+  int _currentDecibels = 0;
+  int get currentDecibels => _currentDecibels;
 
-    int _avgDecibels = 0;
-    int get avgDecibels => _avgDecibels;
+  int _maxDecibels = 0;
+  int get maxDecibels => _maxDecibels;
 
-    List<int> _slidingWindow = [];
-    List<int> get slidingWindow => _slidingWindow;
+  int _avgDecibels = 0;
+  int get avgDecibels => _avgDecibels;
 
-    final int _slidingWindowSize = 20;
+  ListQueue<double> _spots = ListQueue();
+  ListQueue<double> get spots => _spots;
 
-    int _totalTicks = 0;
-    double _sumDecibels = 0.0;
-
-    bool _isListening = false;
-    bool get isListening => _isListening;
-
-    bool _isFading = false;
-
-    double _calibrationOffset = 90.0;
-    double _smoothedDecibels = 0.0;
+  bool _isListening = false;
+  bool get isListening => _isListening;
 
 
-    Future<void> toggleListening(PermissionProvider permissionProvider) async{
-      if(permissionProvider.permissionStatus != MicrophonePermissionStatus.granted){
-        await permissionProvider.requestPermission();
-        if(permissionProvider.permissionStatus != MicrophonePermissionStatus.granted){
-          return;
-        }
-      }
 
+  NoiseMeterProvider(
+      {required this.permissionProvider, required this.noiseProcessorService}) {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
-      if(_isListening){
-        await stopListen();
-      }else{
-        await Future.delayed(const Duration(milliseconds: 500));
-        await startListen();
+  @override
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      await _stopListen();
+    }
+  }
+
+  Future<void> toggleListening() async {
+    if (permissionProvider.permissionStatus !=
+        MicrophonePermissionStatus.granted) {
+      await permissionProvider.requestPermission();
+
+      if (permissionProvider.permissionStatus !=
+          MicrophonePermissionStatus.granted) {
+        return;
       }
     }
 
-
-    Future<void> startListen() async {
-      _isListening = true;
-      await _audioRecorder.startAudioStream();
-      await _audioSubscription?.cancel();
-
-      _audioSubscription = _audioRecorder.amplitudeStream.listen((amplitude){
-        double rawDb = amplitude.current;
-        if (rawDb < -120) rawDb = -120;
-
-        double currentCalibrated = rawDb + _calibrationOffset;
-        if (currentCalibrated < 0) currentCalibrated = 0;
-
-        double k = 0.3;
-        _smoothedDecibels = (k * currentCalibrated) + ((1-k)* _smoothedDecibels);
-        int newDecibels = _smoothedDecibels.round();
-
-        if(newDecibels > _maxDecibels) _maxDecibels = newDecibels;
-
-        _totalTicks++;
-        _sumDecibels += newDecibels;
-        _avgDecibels = (_sumDecibels / _totalTicks).round();
-
-        if(_slidingWindow.length > _slidingWindowSize){
-          _slidingWindow.removeAt(0);
-        }
-        _slidingWindow.add(newDecibels);
-        _slidingWindow = List.from(_slidingWindow);
-
-        if(newDecibels == _currentDecibels){
-          notifyListeners();
-          return;
-        }
-
-        _currentDecibels = newDecibels;
-        notifyListeners();
-      });
+    if (isListening) {
+      await _stopListen();
+    } else {
+      await _startListen();
     }
+  }
 
-    Future<void> stopListen() async {
-      if(_isFading) return;
-      _isFading = true;
 
-      _isListening = false;
-      await _audioSubscription?.cancel();
-      await _audioRecorder.onStopRecording();
-      _currentDecibels = 0;
-      _avgDecibels = 0;
-      _maxDecibels = 0;
-      _sumDecibels = 0;
-      _totalTicks = 0;
-      _smoothedDecibels = 0.0;
+  Future<void> _startListen() async {
+    _isListening = true;
+    await _audioRecorder.startAudioStream();
+    await _audioSubscription?.cancel();
+
+    _audioSubscription = _audioRecorder.amplitudeStream.listen((amplitude) {
+      double rawDb = amplitude.current;
+      if (rawDb < -120) rawDb = -120;
+
+      NoiseMetrics result = noiseProcessorService.process(rawDb);
+      _maxDecibels = result.max;
+      _avgDecibels = result.average;
+      _spots = result.window;
+      _currentDecibels = result.current;
       notifyListeners();
+    });
+  }
 
 
 
-      Timer.periodic(const Duration(milliseconds: 40), (timer){
+  Future<void> _stopListen() async {
+    _isListening = false;
+    await _audioSubscription?.cancel();
+    await _audioRecorder.onStopRecording();
+    _currentDecibels = 0;
+    _avgDecibels = 0;
+    _maxDecibels = 0;
+    noiseProcessorService.reset();
+    notifyListeners();
+  }
 
-        _slidingWindow.removeAt(0);
-        _slidingWindow.add(0);
+  void cleanSpots(){
+    _spots.clear();
+    notifyListeners();
+  }
 
-         bool allZeros = _slidingWindow.every((db) => db ==0);
-
-         _slidingWindow = List.from(_slidingWindow);
-         notifyListeners();
-
-         if(allZeros){
-            timer.cancel();
-            _slidingWindow = [];
-            _isFading = false;
-            log("stop");
-            notifyListeners();
-         }
-
-        });
-      }
-
-      @override
-      void dispose() {
-        _audioSubscription?.cancel();
-        _audioRecorder.dispose();
-        super.dispose();
-      }
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _audioSubscription?.cancel();
+    _audioRecorder.dispose();
+    super.dispose();
+  }
 }
