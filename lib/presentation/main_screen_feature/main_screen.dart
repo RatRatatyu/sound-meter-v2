@@ -23,9 +23,12 @@ class MainScreen extends StatelessWidget {
               flex: 1,
               child: CurrentDecimeterIndicator()
           ),
-          AspectRatio(
-            aspectRatio: 2.0,
-            child: Diagram(),
+          Expanded(
+            flex: 2,
+            child: AspectRatio(
+              aspectRatio: 2.0,
+              child: Diagram(),
+            ),
           ),
           Expanded(
               flex: 1,
@@ -59,18 +62,20 @@ class MainScreen extends StatelessWidget {
                   child: CurrentDecimeterIndicator(),
                 ),
 
-                LayoutBuilder(
-                  builder: (context, constraints) {
+                Expanded(
+                  flex: 2,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth < 300) {
+                        return const SizedBox();
+                      }
 
-                    if (constraints.maxWidth < 300) {
-                      return const SizedBox();
-                    }
-
-                    return const AspectRatio(
-                      aspectRatio: 2.0,
-                      child: Diagram(),
-                    );
-                  },
+                      return const AspectRatio(
+                        aspectRatio: 2.0,
+                        child: Diagram(),
+                      );
+                    },
+                  ),
                 ),
 
                 Expanded(
