@@ -2,14 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:noise_meter_v2/core/providers/permission_provider.dart';
 import 'package:noise_meter_v2/presentation/main_screen_feature/main_screen.dart';
 import 'package:noise_meter_v2/presentation/main_screen_feature/providers/noise_meter_provider.dart';
+import 'package:noise_meter_v2/presentation/main_screen_feature/service/noise_processor_service.dart';
 import 'package:noise_meter_v2/presentation/navigation_feature/navigation_shell_screen.dart';
 import 'package:provider/provider.dart';
+
+
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PermissionProvider()..initialCheck()),
-        ChangeNotifierProvider(create: (_) => NoiseMeterProvider()),
+
+        ChangeNotifierProxyProvider<PermissionProvider, NoiseMeterProvider>(
+            create: (context) => NoiseMeterProvider(
+              permissionProvider: context.read<PermissionProvider>(),
+              noiseProcessorService: NoiseProcessorService()
+            ),
+            update: (context, permission, noiseMeter) => noiseMeter!
+        ),
       ],
       child: const MyApp(),
     ),
