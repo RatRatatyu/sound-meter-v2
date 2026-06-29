@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/additional_decimeter_indicators.dart';
-import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/current_decimeter_indicator.dart';
+import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/additional_decibel_indicators.dart';
+import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/current_decibel_indicator.dart';
 import 'package:noise_meter_v2/presentation/main_screen_feature/widgets/diagram.dart';
 
 
