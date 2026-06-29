@@ -1,8 +1,5 @@
 import 'dart:collection';
 
-import 'package:fl_chart/fl_chart.dart';
-
-
 class NoiseMetrics{
   final int current;
   final int max;
