@@ -15,12 +15,15 @@ class AdditionalDecimeterIndicators extends StatelessWidget {
             (provider) => provider.avgDecibels
     );
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Indicator(indicatorName: "MAX", indicatorValue: maxDecibels),
-        Indicator(indicatorName: "AVG", indicatorValue: avgDecibels),
-      ],
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Indicator(indicatorName: "MAX", indicatorValue: maxDecibels),
+          Indicator(indicatorName: "AVG", indicatorValue: avgDecibels),
+        ],
+      ),
     );
   }
 }
